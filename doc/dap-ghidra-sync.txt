@@ -51,7 +51,7 @@ How it works:~
 
 Using lazy.nvim: >
     {
-      'your-username/dap-ghidra-sync.nvim',
+      'hl037/dap-ghidra-sync.nvim',
       dependencies = { 'mfussenegger/nvim-dap' },
       config = function()
         require('dap-ghidra-sync').setup()
@@ -61,7 +61,7 @@ Using lazy.nvim: >
 
 Using packer.nvim: >
     use {
-      'your-username/dap-ghidra-sync.nvim',
+      'hl037/dap-ghidra-sync.nvim',
       requires = { 'mfussenegger/nvim-dap' },
       config = function()
         require('dap-ghidra-sync').setup()
@@ -71,14 +71,14 @@ Using packer.nvim: >
 
 Using vim-plug: >
     Plug 'mfussenegger/nvim-dap'
-    Plug 'your-username/nvim-dap-ghidra-sync'
+    Plug 'hl037/nvim-dap-ghidra-sync'
 <
 Then in your `init.lua`: >
     require('dap-ghidra-sync').setup()
 <
 
 Manual Installation: >
-    git clone https://github.com/your-username/nvim-dap-ghidra-sync \
+    git clone https://github.com/hl037/nvim-dap-ghidra-sync \
       ~/.config/nvim/pack/plugins/start/nvim-dap-ghidra-sync
 <
 

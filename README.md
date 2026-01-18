@@ -26,7 +26,7 @@ When you hit a breakpoint in nvim-dap, Ghidra automatically jumps to the corresp
 
 ```lua
 {
-  'your-username/nvim-dap-ghidra-sync',
+  'hl037/nvim-dap-ghidra-sync',
   dependencies = { 'mfussenegger/nvim-dap' },
   config = function()
     require('dap-ghidra-sync').setup()
@@ -38,7 +38,7 @@ When you hit a breakpoint in nvim-dap, Ghidra automatically jumps to the corresp
 
 ```lua
 use {
-  'your-username/nvim-dap-ghidra-sync',
+  'hl037/nvim-dap-ghidra-sync',
   requires = { 'mfussenegger/nvim-dap' },
   config = function()
     require('dap-ghidra-sync').setup()
@@ -50,7 +50,7 @@ use {
 
 ```vim
 Plug 'mfussenegger/nvim-dap'
-Plug 'your-username/nvim-dap-ghidra-sync'
+Plug 'hl037/nvim-dap-ghidra-sync'
 ```
 
 Then in your `init.lua`:
@@ -62,7 +62,7 @@ require('dap-ghidra-sync').setup()
 ### Manual Installation
 
 ```bash
-git clone https://github.com/your-username/nvim-dap-ghidra-sync ~/.config/nvim/pack/plugins/start/nvim-dap-ghidra-sync
+git clone https://github.com/hl037/nvim-dap-ghidra-sync ~/.config/nvim/pack/plugins/start/nvim-dap-ghidra-sync
 ```
 
 ## Setup
