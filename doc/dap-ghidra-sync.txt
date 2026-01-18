@@ -1,0 +1,335 @@
+*dap-ghidra-sync.txt*  Sync nvim-dap with Ghidra disassembler
+
+                    DAP-GHIDRA-SYNC MANUAL
+
+Author:   Claude
+License:  MIT
+
+==============================================================================
+CONTENTS                                        *dap-ghidra-sync-contents*
+
+    1. Introduction .................... |dap-ghidra-sync-introduction|
+    2. Requirements .................... |dap-ghidra-sync-requirements|
+    3. Installation .................... |dap-ghidra-sync-installation|
+    4. Configuration ................... |dap-ghidra-sync-configuration|
+    5. Commands ........................ |dap-ghidra-sync-commands|
+    6. Functions ....................... |dap-ghidra-sync-functions|
+    7. Usage ........................... |dap-ghidra-sync-usage|
+    8. Troubleshooting ................. |dap-ghidra-sync-troubleshooting|
+
+==============================================================================
+1. INTRODUCTION                             *dap-ghidra-sync-introduction*
+
+dap-ghidra-sync automatically synchronizes nvim-dap debugging sessions with
+Ghidra's disassembler view. When the debugger stops at a breakpoint, Ghidra
+automatically jumps to the corresponding address in the disassembly.
+
+Features:~
+- Automatic synchronization between nvim-dap and Ghidra
+- Stack frame navigation support
+- Auto-detection of PC register (ARM, x86, x86_64, RISC-V)
+- Smart retry logic with silent background retries
+- Support for remote Ghidra instances
+- Minimal configuration required
+
+How it works:~
+1. Plugin hooks into nvim-dap's `after.event_stopped` listener
+2. When debugger stops, it queries the PC register value
+3. Sends HTTP POST request to Ghidra server with the address
+4. Ghidra server navigates to the address in the disassembly view
+
+==============================================================================
+2. REQUIREMENTS                             *dap-ghidra-sync-requirements*
+
+- Neovim >= 0.5.0
+- nvim-dap (https://github.com/mfussenegger/nvim-dap)
+- Ghidra (https://ghidra-sre.org/)
+- curl (for HTTP communication)
+
+==============================================================================
+3. INSTALLATION                             *dap-ghidra-sync-installation*
+
+Using lazy.nvim: >
+    {
+      'your-username/dap-ghidra-sync.nvim',
+      dependencies = { 'mfussenegger/nvim-dap' },
+      config = function()
+        require('dap-ghidra-sync').setup()
+      end
+    }
+<
+
+Using packer.nvim: >
+    use {
+      'your-username/dap-ghidra-sync.nvim',
+      requires = { 'mfussenegger/nvim-dap' },
+      config = function()
+        require('dap-ghidra-sync').setup()
+      end
+    }
+<
+
+Using vim-plug: >
+    Plug 'mfussenegger/nvim-dap'
+    Plug 'your-username/nvim-dap-ghidra-sync'
+<
+Then in your `init.lua`: >
+    require('dap-ghidra-sync').setup()
+<
+
+Manual Installation: >
+    git clone https://github.com/your-username/nvim-dap-ghidra-sync \
+      ~/.config/nvim/pack/plugins/start/nvim-dap-ghidra-sync
+<
+
+Ghidra Script Installation:~
+
+1. Open Ghidra and load your binary
+2. Open Script Manager: `Window > Script Manager`
+3. Add the plugin directory to script directories. Use |:DapGhidraScriptPath|
+   to display the script path.
+4. Search for "goto server" in the Script Manager window
+5. Check "In tools" for both start and stop scripts
+6. In the `Tool` window menu, you should see a new `GOTO-server` entry.
+   Now you can start/stop the Ghidra server.
+
+Note: You will need to repeat this setup for each Ghidra project, or copy
+the scripts to standard Ghidra script locations.
+
+==============================================================================
+4. CONFIGURATION                           *dap-ghidra-sync-configuration*
+
+Setup with default options: >
+    require('dap-ghidra-sync').setup()
+<
+
+Custom configuration: >
+    require('dap-ghidra-sync').setup({
+      ghidra_host = "127.0.0.1",    -- Ghidra server host
+      ghidra_port = 18888,           -- Ghidra server port
+      retry_interval = 3000,         -- Retry interval in milliseconds
+      pc_register_names = {          -- PC register names to try
+        "pc",                        -- ARM, RISC-V
+        "rip",                       -- x86_64
+        "eip",                       -- x86
+        "r15"                        -- ARM alternative
+      },
+      auto_enable = false            -- Auto-enable when DAP session starts
+    })
+<
+
+Options:~
+    ghidra_host         Host where Ghidra server is running
+                        Default: "127.0.0.1"
+
+    ghidra_port         Port where Ghidra server is listening
+                        Default: 18888
+
+    retry_interval      Time between connection retry attempts (ms)
+                        Default: 3000
+
+    pc_register_names   List of register names to detect PC
+                        Default: {"pc", "rip", "eip", "r15"}
+
+    auto_enable         Auto-enable sync when DAP session starts
+                        Default: false
+
+Supported Architectures:~
+    ARM/ARM64           pc, r15
+    x86_64              rip
+    x86                 eip
+    RISC-V              pc
+
+Add custom register names if needed: >
+    require('dap-ghidra-sync').setup({
+      pc_register_names = { "pc", "rip", "eip", "r15", "custom_pc" }
+    })
+<
+
+==============================================================================
+5. COMMANDS                                     *dap-ghidra-sync-commands*
+
+                                                        *:DapGhidraToggle*
+:DapGhidraToggle
+    Toggle synchronization on/off.
+
+                                                   *:DapGhidraScriptPath*
+:DapGhidraScriptPath
+    Display the path to the Ghidra Python script.
+
+                                                        *:DapGhidraSync*
+:DapGhidraSync
+    Manually synchronize the current stack frame with Ghidra.
+    Useful when automatic sync doesn't trigger or when navigating frames
+    without nvim-dap-ui.
+
+==============================================================================
+6. FUNCTIONS                                   *dap-ghidra-sync-functions*
+
+setup({opts})                                   *dap-ghidra-sync.setup()*
+    Initialize the plugin with optional configuration.
+    Can be called multiple times to reconfigure the plugin.
+    
+    Parameters: ~
+        {opts}  Optional table of configuration options
+        
+    Example: >
+        -- Initial setup
+        require('dap-ghidra-sync').setup({
+          ghidra_port = 9999
+        })
+        
+        -- Reconfigure later
+        require('dap-ghidra-sync').setup({
+          ghidra_host = "192.168.1.100",
+          ghidra_port = 18888
+        })
+<
+
+toggle()                                        *dap-ghidra-sync.toggle()*
+    Toggle synchronization on/off.
+
+sync_current_frame()                    *dap-ghidra-sync.sync_current_frame()*
+    Manually synchronize the current stack frame with Ghidra.
+    
+    Behavior:
+    - Frame 0 (current instruction): Uses PC register
+    - Other frames: Uses instructionPointerReference from stack trace
+
+get_script_path()                      *dap-ghidra-sync.get_script_path()*
+    Get the absolute path to the Ghidra Python script.
+    
+    Returns: ~
+        String containing the script path
+
+==============================================================================
+7. USAGE                                           *dap-ghidra-sync-usage*
+
+Basic Workflow:~
+
+1. Start Ghidra server: Go to `Tool > GOTO-server > Start Server`
+2. Configure nvim-dap as usual
+3. Start debugging - Ghidra will automatically follow the PC
+
+Example keybindings: >
+    vim.keymap.set('n', '<F10>', ':DapStepOver<CR>')
+    vim.keymap.set('n', '<F11>', ':DapStepInto<CR>')
+    vim.keymap.set('n', '<leader>ds', ':DapGhidraSync<CR>')
+<
+
+Stack Frame Navigation:~
+
+The plugin automatically synchronizes when navigating the call stack:
+- Frame 0 (current instruction): Uses PC register value
+- Other frames: Uses instruction pointer from stack trace
+
+Automatic sync works with:
+- nvim-dap-ui: Syncs when selecting frames in the UI
+- Manual navigation: Use :DapGhidraSync to sync current frame
+
+Example workflow: >
+    " Hit a breakpoint
+    " Navigate up/down the stack in dap-ui
+    " Ghidra automatically follows each frame
+    
+    " Or manually sync current frame
+    :DapGhidraSync
+<
+
+Connection Handling:~
+
+- First connection failure: Shows error message with setup instructions
+- Subsequent failures: Retries silently every 3 seconds in background
+- Successful connection: Clears retry state and syncs immediately
+
+Session Cleanup:~
+
+When a DAP session terminates, the plugin automatically:
+- Stops any active retry timers
+- Clears pending sync requests
+- Resets connection state
+- Clears detected PC register cache
+
+The enabled/disabled state is preserved across sessions.
+
+Register Detection:~
+
+The plugin automatically detects the PC register by trying common names.
+Once detected, the register name is cached for the session.
+
+Remote Debugging:~
+
+For remote Ghidra instances, reconfigure with setup(): >
+    require('dap-ghidra-sync').setup({
+      ghidra_host = "192.168.1.100",
+      ghidra_port = 18888
+    })
+<
+
+Make sure the port is accessible through your firewall.
+
+Reconfiguration:~
+
+Call setup() again to change configuration at runtime: >
+    -- Change port
+    require('dap-ghidra-sync').setup({ ghidra_port = 9999 })
+    
+    -- Change host and reset connection
+    require('dap-ghidra-sync').setup({
+      ghidra_host = "10.0.0.5",
+      ghidra_port = 18888
+    })
+<
+
+Auto-enable on DAP Session:~
+
+By default, sync is disabled. Auto-enable when a DAP session starts: >
+    require('dap-ghidra-sync').setup({
+      auto_enable = true
+    })
+<
+
+Note: You can still manually toggle sync with :DapGhidraToggle regardless
+of the auto_enable setting.
+
+==============================================================================
+8. TROUBLESHOOTING                       *dap-ghidra-sync-troubleshooting*
+
+Plugin Not Syncing:~
+
+1. Verify Ghidra script is running
+   Check Ghidra console for "Server thread started"
+
+2. Check network connectivity: >
+    curl -X POST http://127.0.0.1:18888/goto \
+      -d '{"address":"0x1000"}'
+<
+
+3. Verify nvim-dap is working
+   Use :DapToggleBreakpoint and start debugging
+
+4. Check PC register detection
+   Look for "Detected PC register" notification
+
+Connection Refused:~
+
+- Ensure `ghidra_dap_server.py` is running in Ghidra
+- Verify host/port configuration matches
+- Check firewall settings for remote connections
+
+Wrong Address:~
+
+The plugin sends the raw PC register value. If addresses don't match:
+- Verify binary in Ghidra matches the one being debugged
+- Check address space configuration in Ghidra
+- Look for ASLR or relocation issues
+
+Session Cleanup Issues:~
+
+When a DAP session terminates, cleanup is automatic. If issues persist:
+- Manually toggle sync off/on: :DapGhidraToggle
+- Reconfigure: require('dap-ghidra-sync').setup()
+- Restart both Neovim and Ghidra
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
