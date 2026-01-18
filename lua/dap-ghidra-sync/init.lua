@@ -178,12 +178,32 @@ function M.setup(opts)
     end
   end
   
-  -- Hook into frame selection
+  -- Hook into dap up/down commands by wrapping them
+  local group = vim.api.nvim_create_augroup("DapGhidraSync", { clear = true })
+  
+  -- Also sync on stopped event (initial breakpoint)
   vim.api.nvim_create_autocmd("User", {
-    pattern = "DapUIFrameChanged",
+    pattern = "DapStopped",
     callback = sync_on_frame_change,
-    group = vim.api.nvim_create_augroup("DapGhidraSync", { clear = true })
+    group = group
   })
+  
+  -- Wrap dap.up() and dap.down() to trigger sync
+  if dap.up then
+    local original_up = dap.up
+    dap.up = function()
+      original_up()
+      vim.defer_fn(sync_on_frame_change, 100)
+    end
+  end
+  
+  if dap.down then
+    local original_down = dap.down
+    dap.down = function()
+      original_down()
+      vim.defer_fn(sync_on_frame_change, 100)
+    end
+  end
   
   if not state.commands_created then
     vim.api.nvim_create_user_command("DapGhidraToggle", function()
