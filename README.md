@@ -81,6 +81,8 @@ require('dap-ghidra-sync').setup({
 
 ### Ghidra Setup
 
+NOTE that you need to use pyghidra (pyghidra on archlinux, PyGhidraRun or something like it on other systems). On some systems, you may need to install python 3.13 instead of the default one, since jpype may have limitations.
+
 1. Open Ghidra and load your binary
 2. Open Script Manager: `Window > Script Manager`
 3. Add the directory of this plugin to the script directorories. The script path is displayed when you run `:DapGhidraScriptPath`.
